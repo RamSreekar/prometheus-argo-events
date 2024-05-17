@@ -3775,8 +3775,29 @@ prometheus:
     ## The scrape configuration example below will find master nodes, provided they have the name .*mst.*, relabel the
     ## port to 2379 and allow etcd scraping provided it is running on all Kubernetes master nodes
     ##
-    additionalScrapeConfigs: []
-    # - job_name: kube-etcd
+    additionalScrapeConfigs: 
+      - job_name: argo-events
+        kubernetes_sd_configs:
+        - role: pod
+          selectors:
+          - role: pod
+            label: 'controller in (eventsource-controller,sensor-controller,eventbus-controller)'
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_eventbus_name, __meta_kubernetes_pod_label_controller]
+          action: replace
+          regex: (.+);eventbus-controller
+          replacement: $1
+          target_label: 'eventbus_name'
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_controller]
+          action: replace
+          regex: (.+);eventbus-controller
+          replacement: $1
+          target_label: 'namespace'
+        - source_labels: [__address__, __meta_kubernetes_pod_label_controller]
+          action: drop
+          regex: (.+):(\d222);eventbus-controller
+          
+# - job_name: kube-etcd
     #   kubernetes_sd_configs:
     #     - role: node
     #   scheme: https
